@@ -117,7 +117,7 @@ Through this project, I learned how to:
 
 ## Repository
 
-GitHub: **[Insert your repository URL here]**
+GitHub: **https://github.com/ArnavAstu/lynis-custom-security-audit**
 
 ## Conclusion
 
