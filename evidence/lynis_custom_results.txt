@@ -1,0 +1,5 @@
+2026-10-11 13:28:29 Performing test ID CUST-1010 (Audit password aging policy)
+2026-10-11 13:28:29 Warning: PASS_MAX_DAYS is outside the selected 1-90 day range [test:CUST-1010] [details:/etc/login.defs] [solution:-]
+2026-10-11 13:28:29 Performing test ID CUST-1020 (Audit effective SSH server configuration)
+2026-10-11 13:28:29 Warning: Effective PermitRootLogin is prohibit-password [test:CUST-1020] [details:/etc/ssh/sshd_config] [solution:-]
+2026-10-11 13:28:29 Suggestion: Review effective PasswordAuthentication setting: yes [test:CUST-1020] [details:/etc/ssh/sshd_config] [solution:-]

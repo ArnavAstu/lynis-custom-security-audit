@@ -1,0 +1,61 @@
+#!/bin/sh
+
+# Custom Lynis Test 1: Password Policy Audit
+Register --test-no CUST-1010 --weight M --network NO --category security --description "Audit password aging policy"
+
+if [ "${SKIPTEST}" -eq 0 ]; then
+    CONFIG="/etc/login.defs"
+    MAX_DAYS=$(awk '$1=="PASS_MAX_DAYS" {print $2; exit}' "$CONFIG" 2>/dev/null)
+
+    if [ ! -f "$CONFIG" ]; then
+        Display --indent 2 --text "- Password policy file not found" --result "${STATUS_WARNING}" --color YELLOW
+        ReportSuggestion "${TEST_NO}" "Review password aging policy"
+    elif ! printf '%s\n' "$MAX_DAYS" | grep -Eq '^[0-9]+$'; then
+        Display --indent 2 --text "- Password maximum age needs review" --result "${STATUS_WARNING}" --color RED
+        ReportWarning "${TEST_NO}" "PASS_MAX_DAYS is missing or invalid" "$CONFIG"
+    elif [ "$MAX_DAYS" -ge 1 ] && [ "$MAX_DAYS" -le 90 ]; then
+        Display --indent 2 --text "- Password maximum age is configured" --result "${STATUS_OK}" --color GREEN
+        LogText "CUST-1010: PASS_MAX_DAYS=$MAX_DAYS"
+    else
+        Display --indent 2 --text "- Password maximum age needs review" --result "${STATUS_WARNING}" --color RED
+        ReportWarning "${TEST_NO}" "PASS_MAX_DAYS is outside the selected 1-90 day range" "$CONFIG"
+    fi
+fi
+
+# Custom Lynis Test 2: SSH Security Audit
+Register --test-no CUST-1020 --weight M --network NO --category security --description "Audit effective SSH server configuration"
+
+if [ "${SKIPTEST}" -eq 0 ]; then
+    SSH_CONFIG="/etc/ssh/sshd_config"
+
+    if ! command -v sshd >/dev/null 2>&1; then
+        Display --indent 2 --text "- SSH server not installed; audit skipped" --result "${STATUS_NONE}" --color WHITE
+        LogText "CUST-1020: sshd not installed"
+    else
+        EFFECTIVE=$(sshd -T 2>/dev/null)
+
+        if [ -z "$EFFECTIVE" ]; then
+            Display --indent 2 --text "- Effective SSH settings unavailable" --result "${STATUS_WARNING}" --color YELLOW
+            ReportSuggestion "${TEST_NO}" "Check whether sshd -T can read the effective configuration" "$SSH_CONFIG"
+        else
+            ROOT_SETTING=$(printf '%s\n' "$EFFECTIVE" | awk '$1=="permitrootlogin" {print $2; exit}')
+            PASS_SETTING=$(printf '%s\n' "$EFFECTIVE" | awk '$1=="passwordauthentication" {print $2; exit}')
+
+            if [ "$ROOT_SETTING" = "no" ]; then
+                Display --indent 2 --text "- SSH root login is disabled" --result "${STATUS_OK}" --color GREEN
+                LogText "CUST-1020: permitrootlogin=$ROOT_SETTING"
+            else
+                Display --indent 2 --text "- SSH root login setting needs review" --result "${STATUS_WARNING}" --color RED
+                ReportWarning "${TEST_NO}" "Effective PermitRootLogin is $ROOT_SETTING" "$SSH_CONFIG"
+            fi
+
+            if [ "$PASS_SETTING" = "no" ]; then
+                Display --indent 2 --text "- SSH password authentication is disabled" --result "${STATUS_OK}" --color GREEN
+                LogText "CUST-1020: passwordauthentication=$PASS_SETTING"
+            else
+                Display --indent 2 --text "- SSH password authentication is enabled or needs review" --result "${STATUS_WARNING}" --color YELLOW
+                ReportSuggestion "${TEST_NO}" "Review effective PasswordAuthentication setting: $PASS_SETTING" "$SSH_CONFIG"
+            fi
+        fi
+    fi
+fi
